@@ -139,7 +139,7 @@
 </div>
 
 <script>
-  fetch('/api/auth/me', {credentials:'include'}).then(r=>r.json()).then(d=>{ if(d.autenticado) window.location.href='/'; });
+  (async()=>{ try{ const t=localStorage.getItem('token'); if(!t)return; const r=await fetch('/api/auth/me',{headers:{'Authorization':'Bearer '+t}}); const d=await r.json(); if(d.autenticado) window.location.href='/'; }catch(e){} })();
 
   function showPanel(name) {
     document.getElementById('panel-login').style.display    = name==='login'    ? 'block' : 'none';
@@ -164,7 +164,8 @@
     btn.disabled=true; btn.textContent='Verificando...';
     const res  = await fetch('/api/auth/login',{ method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({email,password}) });
     const data = await res.json();
-    if(res.ok){ window.location.href='/'; }
+    if(data.token){ localStorage.setItem('token', data.token); }
+    if(data.ok){ window.location.href='/'; }
     else{ err.textContent=data.error||'Error al iniciar sesión.'; err.style.display='block'; btn.disabled=false; btn.textContent='Iniciar sesión'; }
   }
 
@@ -188,10 +189,9 @@
     const res  = await fetch('/api/auth/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nombre,email,password,rol,empresa}) });
     const data = await res.json();
 
+    if(data.token){ localStorage.setItem('token', data.token); }
     if(res.ok){
       suc.textContent='✅ Cuenta creada. Redirigiendo...'; suc.style.display='block';
-      // Auto-login
-      await fetch('/api/auth/login',{ method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({email,password}) });
       setTimeout(()=>window.location.href='/', 1000);
     } else {
       err.textContent=data.error||'Error al crear la cuenta.'; err.style.display='block';

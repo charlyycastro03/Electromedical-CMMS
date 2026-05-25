@@ -32,7 +32,7 @@ router.post('/', requireRol('admin'), async (req, res) => {
 router.delete('/:id', requireRol('admin'), async (req, res) => {
   try {
     const uId = parseInt(req.params.id);
-    if (uId === req.session.usuario.id) return res.status(400).json({ error: 'No puedes desactivarte a ti mismo.' });
+    if (uId === req.usuario.id) return res.status(400).json({ error: 'No puedes desactivarte a ti mismo.' });
     await deactivateUser(uId);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: 'Error interno.' }); }

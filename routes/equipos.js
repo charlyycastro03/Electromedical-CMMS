@@ -7,7 +7,7 @@ const { getAllEquipos, getEquiposByEmpresa, getEquipoById, getEquipoByCodigo,
 router.get('/', requireAuth, async (req, res) => {
   try {
     await actualizarEstados();
-    const { rol, empresa } = req.session.usuario;
+    const { rol, empresa } = req.usuario;
     const list = rol === 'cliente' ? await getEquiposByEmpresa(empresa) : await getAllEquipos();
     const ord = { vencido:0, proximo:1, al_dia:2, sin_fecha:3 };
     res.json(list.sort((a,b) => (ord[a.estado]??9)-(ord[b.estado]??9)));
@@ -23,7 +23,7 @@ router.get('/empresas', requireAuth, async (req, res) => {
 
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    const { rol, empresa } = req.session.usuario;
+    const { rol, empresa } = req.usuario;
     const eq = await getEquipoById(parseInt(req.params.id));
     if (!eq) return res.status(404).json({ error: 'Equipo no encontrado.' });
     if (rol === 'cliente' && eq.empresa !== empresa) return res.status(403).json({ error: 'Sin acceso.' });

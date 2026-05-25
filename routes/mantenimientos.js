@@ -10,7 +10,7 @@ router.post('/', requireRol('admin','usuario'), async (req, res) => {
     if (!equipo) return res.status(404).json({ error: 'Equipo no encontrado.' });
     const nuevo = await createMantenimiento({
       equipo_id: parseInt(equipo_id), tipo, fecha, tecnico, descripcion, observaciones, costo,
-      registrado_por: req.session.usuario.nombre
+      registrado_por: req.usuario.nombre
     });
     await updateEquipoFechas(parseInt(equipo_id), fecha, equipo.frecuencia_meses);
     res.status(201).json(nuevo);

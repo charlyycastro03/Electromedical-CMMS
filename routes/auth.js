@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { findUserByEmail, createUser, findUserByEmailAll } = require('../utils/db');
+const { generarToken, obtenerUsuarioDeToken } = require('../utils/jwt');
 
 router.post('/login', async (req, res) => {
   try {
@@ -9,8 +10,8 @@ router.post('/login', async (req, res) => {
     const u = await findUserByEmail(email);
     if (!u || !bcrypt.compareSync(password, u.password)) return res.status(401).json({ error: 'Credenciales incorrectas.' });
     const { password: _, ...seguro } = u;
-    req.session.usuario = seguro;
-    res.json({ ok: true, usuario: seguro });
+    const token = generarToken(seguro);
+    res.json({ ok: true, token, usuario: seguro });
   } catch (e) { res.status(500).json({ error: 'Error interno.' }); }
 });
 
@@ -24,19 +25,19 @@ router.post('/register', async (req, res) => {
     const existente = await findUserByEmailAll(email);
     if (existente) return res.status(400).json({ error: 'Email ya registrado.' });
     const nuevo = await createUser({ nombre, email, password: bcrypt.hashSync(password, 10), rol, empresa });
-    req.session.usuario = nuevo;
-    res.status(201).json({ ok: true, usuario: nuevo });
+    const token = generarToken(nuevo);
+    res.status(201).json({ ok: true, token, usuario: nuevo });
   } catch (e) { res.status(500).json({ error: 'Error interno.' }); }
 });
 
 router.post('/logout', (req, res) => {
-  req.session.destroy();
   res.json({ ok: true });
 });
 
 router.get('/me', (req, res) => {
-  if (!req.session?.usuario) return res.json({ autenticado: false });
-  res.json({ autenticado: true, usuario: req.session.usuario });
+  const usuario = obtenerUsuarioDeToken(req);
+  if (!usuario) return res.json({ autenticado: false });
+  res.json({ autenticado: true, usuario });
 });
 
 module.exports = router;

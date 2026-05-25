@@ -672,9 +672,11 @@
 // ═══════════════════════════════════════════
 (async () => {
   try {
-    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    const t = localStorage.getItem('token');
+    if (!t) { window.location.replace('/login.html'); return; }
+    const r = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + t } });
     const d = await r.json();
-    if (!d.autenticado) { window.location.replace('/login.html'); }
+    if (!d.autenticado) { localStorage.removeItem('token'); window.location.replace('/login.html'); }
   } catch(e) { window.location.replace('/login.html'); }
 })();
 
@@ -692,9 +694,12 @@ let prevPage    = 'dashboard';
 // ═══════════════════════════════════════════
 async function init() {
   try {
-    const res  = await fetch('/api/auth/me', { credentials: 'include' });
+    const t = localStorage.getItem('token');
+    if (!t) { window.location.replace('/login.html'); return; }
+    const res  = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + t } });
     const data = await res.json();
     if (!data.autenticado) {
+      localStorage.removeItem('token');
       window.location.replace('/login.html');
       return;
     }
@@ -1265,7 +1270,7 @@ async function guardarNuevoTicket() {
 //  AUTH
 // ═══════════════════════════════════════════
 async function logout() {
-  await fetch('/api/auth/logout', { method: 'POST' });
+  localStorage.removeItem('token');
   window.location.href = '/login.html';
 }
 
@@ -1294,7 +1299,8 @@ function closeSidebar() {
 //  HELPERS
 // ═══════════════════════════════════════════
 async function api(url, method = 'GET', body = null) {
-  const opts = { method, headers: {}, credentials: 'include' };
+  const token = localStorage.getItem('token');
+  const opts = { method, headers: { 'Authorization': 'Bearer ' + (token || '') } };
   if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   const res  = await fetch(url, opts);
   return res.json();
