@@ -38,7 +38,16 @@ function calcularEstado(proximo) {
 }
 
 async function actualizarEstados() {
-  await api('rpc/actualizar_estados_equipos', { method: 'POST', body: '{}' });
+  try {
+    const equipos = await api('equipos?select=id,proximo_mantenimiento,estado');
+    const updates = equipos.filter(e => {
+      const nuevo = calcularEstado(e.proximo_mantenimiento);
+      return nuevo !== e.estado;
+    });
+    for (const e of updates) {
+      await api(`equipos?id=eq.${e.id}`, { method: 'PATCH', body: JSON.stringify({ estado: calcularEstado(e.proximo_mantenimiento) }) });
+    }
+  } catch (_) {}
 }
 
 // ── Usuarios ──────────────────────────────────
