@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Electromedical — Reporte de Falla</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0d1117;--surface:#161b22;--surface-2:#1c2230;
+      --border:#30363d;--primary:#7c86ff;--success:#3fb950;
+      --danger:#f85149;--warning:#d29922;--text:#e6edf3;--muted:#8b949e;
+    }
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    header{
+      background:var(--surface);border-bottom:1px solid var(--border);
+      padding:1rem 1.5rem;display:flex;align-items:center;gap:.75rem;
+    }
+    header img{width:36px;height:36px;border-radius:8px;}
+    header h1{font-size:1rem;font-weight:700;}
+    header p{font-size:.75rem;color:var(--muted);}
+    .container{max-width:520px;margin:0 auto;padding:1.5rem;}
+    .equipo-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;
+    }
+    .equipo-card .tag{
+      font-size:.7rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--primary);margin-bottom:.5rem;
+    }
+    .equipo-card h2{font-size:1.1rem;font-weight:700;margin-bottom:.3rem;}
+    .equipo-card p{font-size:.85rem;color:var(--muted);}
+    .badge{
+      display:inline-block;padding:.2rem .65rem;border-radius:20px;
+      font-size:.7rem;font-weight:600;margin-top:.6rem;
+      background:rgba(124,134,255,.15);color:var(--primary);
+    }
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem;}
+    .card h3{font-size:1rem;font-weight:600;margin-bottom:1.2rem;}
+    .form-group{margin-bottom:1rem;}
+    label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;}
+    input,select,textarea{
+      width:100%;padding:.6rem .85rem;
+      background:#0d1117;border:1px solid var(--border);
+      border-radius:8px;color:var(--text);font-size:.9rem;
+      font-family:inherit;transition:border-color .2s;
+    }
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,134,255,.12);}
+    textarea{resize:vertical;min-height:90px;}
+    select option{background:#161b22;}
+    .btn{
+      width:100%;padding:.75rem;background:var(--primary);
+      border:none;border-radius:8px;color:#fff;
+      font-size:.95rem;font-weight:600;cursor:pointer;
+      transition:opacity .2s;
+    }
+    .btn:hover{opacity:.9;}
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+    .success-screen{
+      text-align:center;padding:3rem 1.5rem;
+      background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    }
+    .success-icon{font-size:3rem;margin-bottom:1rem;}
+    .success-screen h2{font-size:1.2rem;margin-bottom:.5rem;}
+    .success-screen p{color:var(--muted);font-size:.9rem;}
+    .ticket-num{
+      background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);
+      border-radius:8px;padding:.6rem 1rem;margin:1rem 0;
+      font-size:.85rem;color:var(--success);font-weight:600;
+    }
+    .not-found{text-align:center;padding:3rem;color:var(--muted);}
+    .not-found .icon{font-size:3rem;margin-bottom:1rem;}
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%231e3a5f'/%3E%3Ctext x='18' y='25' text-anchor='middle' font-size='18' fill='%237c86ff'%3E🏥%3C/text%3E%3C/svg%3E"/>
+  <div>
+    <h1>Electromedical</h1>
+    <p>Reporte de falla de equipo</p>
+  </div>
+</header>
+
+<div class="container" id="app">
+  <p style="color:var(--muted);text-align:center;padding:3rem;">Cargando...</p>
+</div>
+
+<script>
+const codigo = location.pathname.split('/').pop();
+
+async function init() {
+  const app = document.getElementById('app');
+
+  // Cargar info del equipo
+  const res    = await fetch(`/api/tickets/helpdesk/${codigo}`);
+  if (!res.ok) {
+    app.innerHTML = `
+      <div class="not-found">
+        <div class="icon">🔍</div>
+        <h3>Equipo no encontrado</h3>
+        <p>El código <strong>${codigo}</strong> no está registrado en el sistema.</p>
+        <p style="margin-top:.5rem">Contacta a Electromedical: <strong>+52 81 0000 0000</strong></p>
+      </div>`;
+    return;
+  }
+
+  const equipo = await res.json();
+
+  app.innerHTML = `
+    <div class="equipo-card">
+      <p class="tag">📋 Equipo identificado</p>
+      <h2>${equipo.nombre}</h2>
+      <p>${equipo.tipo} · ${equipo.area}</p>
+      ${equipo.marca ? `<p style="margin-top:.2rem">${equipo.marca} ${equipo.modelo || ''}</p>` : ''}
+      <span class="badge">${equipo.codigo}</span>
+    </div>
+
+    <div class="card">
+      <h3>Reportar falla o solicitud de servicio</h3>
+      <div class="form-group">
+        <label>Tipo de falla *</label>
+        <select id="tipo_falla">
+          <option value="">Selecciona...</option>
+          <option>Falla eléctrica</option>
+          <option>Falla mecánica</option>
+          <option>Error en pantalla / software</option>
+          <option>Ruido anormal</option>
+          <option>No enciende</option>
+          <option>Alarma constante</option>
+          <option>Solicitud de mantenimiento</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Descripción del problema *</label>
+        <textarea id="descripcion" placeholder="Describe qué está pasando con el equipo..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Tu nombre *</label>
+        <input type="text" id="reportado_por" placeholder="Nombre completo"/>
+      </div>
+      <div class="form-group">
+        <label>Extensión o contacto</label>
+        <input type="text" id="contacto" placeholder="Ext. 1234 o celular"/>
+      </div>
+      <button class="btn" id="btn-enviar" onclick="enviarTicket(${equipo.id})">
+        Enviar reporte
+      </button>
+    </div>
+
+    <p style="text-align:center;font-size:.78rem;color:var(--muted);padding:.5rem">
+      Soporte: +52 81 0000 0000 · soporte@electromedical.com
+    </p>
+  `;
+}
+
+async function enviarTicket(equipoId) {
+  const btn          = document.getElementById('btn-enviar');
+  const tipo_falla   = document.getElementById('tipo_falla').value;
+  const descripcion  = document.getElementById('descripcion').value.trim();
+  const reportado_por= document.getElementById('reportado_por').value.trim();
+  const contacto     = document.getElementById('contacto').value.trim();
+
+  if (!tipo_falla || !descripcion || !reportado_por) {
+    alert('Por favor completa los campos obligatorios.');
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Enviando...';
+
+  const res  = await fetch('/api/tickets', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ equipo_id: equipoId, tipo_falla, descripcion, reportado_por, contacto }),
+  });
+  const data = await res.json();
+
+  if (res.ok) {
+    document.getElementById('app').innerHTML = `
+      <div class="success-screen">
+        <div class="success-icon">✅</div>
+        <h2>¡Reporte enviado!</h2>
+        <div class="ticket-num">Ticket #${data.id}</div>
+        <p>El equipo de Electromedical fue notificado y atenderá tu solicitud a la brevedad.</p>
+        <p style="margin-top:1rem">Guarda tu número de ticket para seguimiento.</p>
+        <p style="margin-top:1.5rem;font-size:.85rem">
+          📞 +52 81 0000 0000<br/>
+          ✉️ soporte@electromedical.com
+        </p>
+      </div>`;
+  } else {
+    alert(data.error || 'Error al enviar el reporte.');
+    btn.disabled    = false;
+    btn.textContent = 'Enviar reporte';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

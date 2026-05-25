@@ -1,0 +1,188 @@
+{
+  "usuarios": [
+    {
+      "id": 1,
+      "nombre": "Administrador",
+      "email": "admin@electromedical.com",
+      "password": "$2a$10$LrBpRDxDjF7D8YRac7KmZeBrcCtO0AcpAeI95KOIvUPNdioQN9Aqu",
+      "rol": "admin",
+      "empresa": "Electromedical",
+      "activo": true,
+      "fecha_registro": "2026-05-25"
+    },
+    {
+      "id": 2,
+      "nombre": "Ing. Carlos Ruiz",
+      "email": "carlos@electromedical.com",
+      "password": "$2a$10$wKA1V0Lm5DKP7jPPhp5loOGhvz1JK/q1ihLgJddua5qV/AYIaJWOy",
+      "rol": "usuario",
+      "empresa": "Electromedical",
+      "activo": true,
+      "fecha_registro": "2026-05-25"
+    },
+    {
+      "id": 3,
+      "nombre": "Hospital Regional",
+      "email": "hospital@cliente.com",
+      "password": "$2a$10$zBIEv7AcWDi/ofiugX374Oun1ZwNdgxmHR0PQi/W/9.XkGwWNaKte",
+      "rol": "cliente",
+      "empresa": "Hospital Regional del Norte",
+      "activo": true,
+      "fecha_registro": "2026-05-25"
+    }
+  ],
+  "equipos": [
+    {
+      "id": 1,
+      "codigo": "BIO-001",
+      "nombre": "Ventilador Mecánico A",
+      "tipo": "Ventilador mecánico",
+      "area": "UCI",
+      "marca": "Maquet",
+      "modelo": "SERVO-i",
+      "num_serie": "SN-2021-001",
+      "frecuencia_meses": 3,
+      "ultimo_mantenimiento": "2024-11-01",
+      "proximo_mantenimiento": "2025-02-01",
+      "empresa": "Hospital Regional del Norte",
+      "estado": "vencido",
+      "fecha_registro": "2026-05-25"
+    },
+    {
+      "id": 2,
+      "codigo": "BIO-002",
+      "nombre": "Monitor Signos Vitales 1",
+      "tipo": "Monitor de signos vitales",
+      "area": "Urgencias",
+      "marca": "Philips",
+      "modelo": "MX450",
+      "num_serie": "SN-2022-045",
+      "frecuencia_meses": 6,
+      "ultimo_mantenimiento": "2025-03-15",
+      "proximo_mantenimiento": "2025-09-15",
+      "empresa": "Hospital Regional del Norte",
+      "estado": "al_dia",
+      "fecha_registro": "2026-05-25"
+    },
+    {
+      "id": 3,
+      "codigo": "BIO-003",
+      "nombre": "Desfibrilador UCI",
+      "tipo": "Desfibrilador",
+      "area": "UCI",
+      "marca": "Zoll",
+      "modelo": "R Series",
+      "num_serie": "SN-2020-012",
+      "frecuencia_meses": 3,
+      "ultimo_mantenimiento": "2025-01-10",
+      "proximo_mantenimiento": "2025-04-10",
+      "empresa": "Hospital Regional del Norte",
+      "estado": "vencido",
+      "fecha_registro": "2026-05-25"
+    },
+    {
+      "id": 4,
+      "codigo": "BIO-004",
+      "nombre": "Bomba Infusión Quirófano",
+      "tipo": "Bomba de infusión",
+      "area": "Quirófano",
+      "marca": "Baxter",
+      "modelo": "Sigma Spectrum",
+      "num_serie": "SN-2023-088",
+      "frecuencia_meses": 6,
+      "ultimo_mantenimiento": "2025-02-20",
+      "proximo_mantenimiento": "2025-08-20",
+      "empresa": "Hospital Regional del Norte",
+      "estado": "al_dia",
+      "fecha_registro": "2026-05-25"
+    },
+    {
+      "id": 5,
+      "codigo": "BIO-005",
+      "nombre": "Cama Hospitalaria Piso 2",
+      "tipo": "Cama hospitalaria",
+      "area": "Hospitalización",
+      "marca": "Hill-Rom",
+      "modelo": "P500",
+      "num_serie": "SN-2019-200",
+      "frecuencia_meses": 12,
+      "ultimo_mantenimiento": "2024-05-01",
+      "proximo_mantenimiento": "2025-05-01",
+      "empresa": "Hospital Regional del Norte",
+      "estado": "proximo",
+      "fecha_registro": "2026-05-25"
+    }
+  ],
+  "mantenimientos": [
+    {
+      "id": 1,
+      "equipo_id": 1,
+      "tipo": "Preventivo",
+      "fecha": "2024-11-01",
+      "tecnico": "Ing. Carlos Ruiz",
+      "descripcion": "Mantenimiento preventivo trimestral",
+      "observaciones": "Todo en orden",
+      "costo": 1200
+    },
+    {
+      "id": 2,
+      "equipo_id": 2,
+      "tipo": "Preventivo",
+      "fecha": "2025-03-15",
+      "tecnico": "Ing. María López",
+      "descripcion": "Revisión semestral completa",
+      "observaciones": "Cambio de batería",
+      "costo": 850
+    },
+    {
+      "id": 3,
+      "equipo_id": 3,
+      "tipo": "Correctivo",
+      "fecha": "2025-01-10",
+      "tecnico": "Ing. Carlos Ruiz",
+      "descripcion": "Falla en pantalla",
+      "observaciones": "Se reemplazó módulo de pantalla",
+      "costo": 3500
+    }
+  ],
+  "tickets": [
+    {
+      "id": 1,
+      "equipo_id": 2,
+      "tipo_falla": "Alarma constante",
+      "descripcion": "El monitor suena constantemente",
+      "reportado_por": "Enf. María González",
+      "reportado_por_id": 3,
+      "contacto": "Ext. 201",
+      "estatus": "abierto",
+      "asignado_a": null,
+      "asignado_a_id": null,
+      "notas_tecnico": null,
+      "fecha_creacion": "2026-05-25T18:10:57.176Z",
+      "fecha_atencion": null,
+      "fecha_cierre": null
+    },
+    {
+      "id": 2,
+      "equipo_id": 1,
+      "tipo_falla": "No enciende",
+      "descripcion": "El ventilador no enciende desde ayer",
+      "reportado_por": "Dr. Ramírez",
+      "reportado_por_id": 3,
+      "contacto": "Ext. 305",
+      "estatus": "en_proceso",
+      "asignado_a": "Ing. Carlos Ruiz",
+      "asignado_a_id": 2,
+      "notas_tecnico": "Revisando fusibles",
+      "fecha_creacion": "2026-05-24T18:10:57.176Z",
+      "fecha_atencion": "2026-05-25T18:10:57.176Z",
+      "fecha_cierre": null
+    }
+  ],
+  "nextIds": {
+    "usuario": 4,
+    "equipo": 6,
+    "mantenimiento": 4,
+    "ticket": 3
+  }
+}

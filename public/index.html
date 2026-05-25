@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Electromedical CMMS</title>
+  <style>
+    /* ═══════════════ VARIABLES ═══════════════ */
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161b22;
+      --surface-2:  #1c2230;
+      --surface-3:  #232a3b;
+      --border:     #30363d;
+      --border-2:   #3d4555;
+      --primary:    #7c86ff;
+      --primary-dim:#3d4499;
+      --success:    #3fb950;
+      --warning:    #d29922;
+      --danger:     #f85149;
+      --info:       #58a6ff;
+      --text:       #e6edf3;
+      --muted:      #8b949e;
+      --dim:        #484f58;
+      --radius:     10px;
+      --sidebar-w:  240px;
+    }
+
+    /* ═══════════════ RESET ═══════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; overflow-x: hidden;
+    }
+    button { cursor: pointer; }
+    input, select, textarea { font-family: inherit; }
+
+    /* ═══════════════ SIDEBAR ═════════════════ */
+    #sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; height: 100vh; z-index: 50;
+      transition: transform .25s ease;
+    }
+    .sidebar-logo {
+      padding: 1.25rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: .7rem;
+    }
+    .sidebar-logo img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+    .sidebar-logo h1 { font-size: .95rem; font-weight: 700; }
+    .sidebar-logo p  { font-size: .68rem; color: var(--muted); }
+
+    .sidebar-nav { flex: 1; padding: .75rem .6rem; overflow-y: auto; }
+    .nav-section-title {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--dim);
+      padding: .75rem .6rem .3rem;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .55rem .75rem; border-radius: 8px;
+      font-size: .88rem; color: var(--muted);
+      background: none; border: none; width: 100%; text-align: left;
+      transition: background .15s, color .15s; margin-bottom: .1rem;
+    }
+    .nav-item:hover { background: var(--surface-2); color: var(--text); }
+    .nav-item.active { background: rgba(124,134,255,.15); color: var(--primary); font-weight: 600; }
+    .nav-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+    .nav-badge {
+      margin-left: auto; background: var(--danger);
+      color: #fff; font-size: .65rem; font-weight: 700;
+      padding: .1rem .45rem; border-radius: 20px; min-width: 18px; text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: .75rem .6rem; border-top: 1px solid var(--border);
+    }
+    .user-pill {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .5rem .6rem; border-radius: 8px;
+    }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary-dim); display: flex; align-items: center;
+      justify-content: center; font-size: .8rem; font-weight: 700;
+      color: var(--primary); flex-shrink: 0;
+    }
+    .user-info { flex: 1; overflow: hidden; }
+    .user-info .name { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-info .role { font-size: .7rem; color: var(--muted); }
+    .btn-logout {
+      background: none; border: none; color: var(--muted);
+      font-size: 1rem; padding: .3rem; border-radius: 6px;
+      transition: color .15s, background .15s;
+    }
+    .btn-logout:hover { color: var(--danger); background: rgba(248,81,73,.1); }
+
+    /* ═══════════════ MAIN ════════════════════ */
+    #main {
+      flex: 1; margin-left: var(--sidebar-w);
+      display: flex; flex-direction: column; min-height: 100vh;
+    }
+    .topbar {
+      height: 56px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0 1.5rem; position: sticky; top: 0; z-index: 30;
+    }
+    .topbar h2 { font-size: 1rem; font-weight: 600; flex: 1; }
+    .topbar-actions { display: flex; gap: .5rem; }
+    .content { padding: 1.5rem; flex: 1; max-width: 1200px; width: 100%; }
+
+    /* ═══════════════ PAGES ═══════════════════ */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ═══════════════ GRID / CARDS ════════════ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.2rem 1.3rem;
+      border-left: 3px solid var(--primary);
+      transition: border-color .2s;
+    }
+    .kpi-card.success { border-color: var(--success); }
+    .kpi-card.warning { border-color: var(--warning); }
+    .kpi-card.danger  { border-color: var(--danger);  }
+    .kpi-card.info    { border-color: var(--info);    }
+    .kpi-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .4rem; }
+    .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .kpi-card.success .kpi-value { color: var(--success); }
+    .kpi-card.warning .kpi-value { color: var(--warning); }
+    .kpi-card.danger  .kpi-value { color: var(--danger);  }
+    .kpi-card.info    .kpi-value { color: var(--info);    }
+    .kpi-sub { font-size: .75rem; color: var(--muted); margin-top: .3rem; }
+
+    /* ═══════════════ TABLES ══════════════════ */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 1.2rem;
+    }
+    .card-header {
+      padding: .9rem 1.2rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem;
+    }
+    .card-title { font-size: .9rem; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left; padding: .65rem 1rem;
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted);
+      background: var(--surface-2); border-bottom: 1px solid var(--border);
+    }
+    td { padding: .7rem 1rem; font-size: .88rem; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tbody tr { transition: background .12s; }
+    tbody tr:hover { background: var(--surface-2); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 3rem; }
+
+    /* ═══════════════ BADGES ══════════════════ */
+    .badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .2rem .65rem; border-radius: 20px;
+      font-size: .72rem; font-weight: 700; white-space: nowrap;
+    }
+    .badge.al_dia    { background: rgba(63,185,80,.15);  color: var(--success); }
+    .badge.proximo   { background: rgba(210,153,34,.15); color: var(--warning); }
+    .badge.vencido   { background: rgba(248,81,73,.15);  color: var(--danger);  }
+    .badge.abierto   { background: rgba(248,81,73,.15);  color: var(--danger);  }
+    .badge.en_proceso{ background: rgba(210,153,34,.15); color: var(--warning); }
+    .badge.cerrado   { background: rgba(63,185,80,.15);  color: var(--success); }
+    .badge.admin     { background: rgba(124,134,255,.15);color: var(--primary); }
+    .badge.usuario   { background: rgba(88,166,255,.15); color: var(--info);    }
+    .badge.cliente   { background: rgba(63,185,80,.15);  color: var(--success); }
+
+    /* ═══════════════ BUTTONS ═════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .65rem 1.3rem; border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 600; transition: opacity .15s, transform .1s;
+    }
+    .btn:hover   { opacity: .85; }
+    .btn:active  { transform: scale(.98); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger  { background: var(--danger);  color: #fff; }
+    .btn-ghost   { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm      { padding: .45rem .9rem; font-size: .85rem; }
+
+    /* ═══════════════ TOOLBAR ═════════════════ */
+    .toolbar {
+      display: flex; gap: .75rem; align-items: center;
+      margin-bottom: 1rem; flex-wrap: wrap;
+    }
+    .search-input {
+      flex: 1; min-width: 200px;
+      padding: .5rem .9rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: .88rem;
+    }
+    .search-input:focus { outline: none; border-color: var(--primary); }
+    .filter-select {
+      padding: .5rem .8rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: .88rem;
+    }
+    .filter-select option { background: var(--surface-2); }
+
+    /* ═══════════════ MODAL ═══════════════════ */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.65); z-index: 200;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; width: 100%; max-width: 540px;
+      max-height: 90vh; overflow-y: auto;
+      padding: 1.8rem; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    }
+    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.4rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+    .fg      { display: flex; flex-direction: column; gap: .3rem; }
+    .fg.full { grid-column: 1/-1; }
+    .fg label { font-size: .74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .fg input, .fg select, .fg textarea {
+      padding: .55rem .8rem; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: .88rem;
+      transition: border-color .15s;
+    }
+    .fg input:focus, .fg select:focus, .fg textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124,134,255,.12);
+    }
+    .fg select option { background: var(--surface-2); }
+    .fg textarea { resize: vertical; min-height: 80px; }
+    .modal-footer { display: flex; gap: .65rem; justify-content: flex-end; margin-top: 1.4rem; }
+
+    /* ═══════════════ DETAIL ══════════════════ */
+    .detail-hero {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      display: flex; gap: 1.2rem; align-items: flex-start;
+      flex-wrap: wrap; margin-bottom: 1.2rem;
+    }
+    .detail-icon {
+      width: 56px; height: 56px; border-radius: 12px;
+      background: rgba(124,134,255,.15); display: flex;
+      align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;
+    }
+    .detail-meta { flex: 1; }
+    .detail-meta h2 { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+    .detail-meta p  { font-size: .85rem; color: var(--muted); margin-top: .2rem; }
+    .code-chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: rgba(88,166,255,.1); color: var(--info);
+      border: 1px solid rgba(88,166,255,.2);
+      border-radius: 6px; padding: .2rem .65rem;
+      font-size: .78rem; font-weight: 600; margin-top: .5rem;
+      font-family: monospace;
+    }
+    .props-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+      gap: .75rem; margin-top: 1rem; width: 100%;
+    }
+    .prop .key { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .prop .val { font-size: .88rem; font-weight: 600; margin-top: .1rem; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: .8rem; margin-top: 1.4rem;
+    }
+    .section-header h3 { font-size: .9rem; font-weight: 700; }
+    .hist-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--primary); border-radius: 8px;
+      padding: .9rem 1.1rem; margin-bottom: .6rem;
+    }
+    .hist-item.Correctivo { border-color: var(--danger); }
+    .hist-item.Preventivo { border-color: var(--success); }
+    .hist-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .3rem; }
+    .hist-row .tipo { font-weight: 700; font-size: .88rem; }
+    .hist-row .fecha { font-size: .8rem; color: var(--muted); }
+    .hist-body { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+
+    /* ═══════════════ ALERTS ══════════════════ */
+    .alert-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: .85rem 1rem;
+      display: flex; align-items: center; gap: .9rem; margin-bottom: .5rem;
+    }
+    .alert-info { flex: 1; }
+    .alert-info .name { font-weight: 600; font-size: .9rem; }
+    .alert-info .sub  { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+    .dias-chip { font-size: .78rem; font-weight: 700; white-space: nowrap; }
+
+    /* ═══════════════ BAR CHART ═══════════════ */
+    .bar-chart { padding: .5rem 0; }
+    .bar-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .6rem; }
+    .bar-label { font-size: .8rem; color: var(--muted); width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; background: var(--surface-2); border-radius: 20px; height: 8px; }
+    .bar-fill  { height: 8px; border-radius: 20px; background: var(--primary); transition: width .5s ease; }
+    .bar-count { font-size: .8rem; font-weight: 700; color: var(--text); min-width: 20px; text-align: right; }
+
+    /* ═══════════════ BACK BTN ════════════════ */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: none; border: none; color: var(--muted);
+      font-size: .85rem; margin-bottom: 1rem; padding: 0;
+      transition: color .15s;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    /* ═══════════════ TICKET CARD ════════════ */
+    .ticket-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: .65rem;
+    }
+    .ticket-header { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: .5rem; }
+    .ticket-num { font-size: .7rem; color: var(--muted); font-family: monospace; }
+    .ticket-title { font-weight: 600; font-size: .9rem; flex: 1; }
+    .ticket-meta { font-size: .78rem; color: var(--muted); display: flex; gap: 1rem; flex-wrap: wrap; }
+
+    /* ═══════════════ RESPONSIVE ══════════════ */
+    #menu-toggle {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 1.3rem; padding: .3rem;
+    }
+    .overlay-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 40;
+    }
+
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      .overlay-bg.open { display: block; }
+      #main { margin-left: 0; }
+      #menu-toggle { display: block; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .content { padding: 1rem; }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Overlay mobile -->
+<div class="overlay-bg" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside id="sidebar">
+  <div class="sidebar-logo" onclick="showPage('dashboard')" style="cursor:pointer" title="Ir al Dashboard">
+    <img id="sidebar-logo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%231e3a5f'/%3E%3Ctext x='18' y='25' text-anchor='middle' font-size='18' fill='%237c86ff'%3E🏥%3C/text%3E%3C/svg%3E" alt="Logo"/>
+    <div>
+      <h1>Electromedical</h1>
+      <p>CMMS v2.0</p>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav" id="sidebar-nav">
+    <!-- Generado dinámicamente según rol -->
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="avatar" id="user-avatar">?</div>
+      <div class="user-info">
+        <p class="name" id="user-name">Cargando...</p>
+        <p class="role" id="user-role">—</p>
+      </div>
+      <button class="btn-logout" title="Cerrar sesión" onclick="logout()">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <div class="topbar">
+    <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <h2 id="page-title">Dashboard</h2>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid" id="kpi-equipos"></div>
+      <div class="kpi-grid" id="kpi-tickets" style="display:none"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem" id="charts-row">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📍 Equipos por área</span></div>
+          <div style="padding:1rem" id="chart-areas"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">⚡ Equipos críticos</span></div>
+          <div style="padding:1rem" id="chart-criticos"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🔔 Alertas de mantenimiento</span></div>
+        <div style="padding:.75rem 1rem" id="alertas-list"></div>
+      </div>
+    </div>
+
+    <!-- ── EQUIPOS ── -->
+    <div class="page" id="page-equipos">
+      <div class="toolbar">
+        <input class="search-input" type="text" id="eq-search" placeholder="🔍 Buscar equipo, código, área..." oninput="filterEquipos()"/>
+        <select class="filter-select" id="eq-filter-estado" onchange="filterEquipos()">
+          <option value="">Todos los estados</option>
+          <option value="al_dia">✅ Al día</option>
+          <option value="proximo">⚠️ Próximo</option>
+          <option value="vencido">🔴 Vencido</option>
+        </select>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th><th>Nombre</th><th>Tipo</th><th>Área</th><th>Hospital/Empresa</th>
+              <th>Próximo mant.</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="equipos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── DETALLE EQUIPO ── -->
+    <div class="page" id="page-detalle">
+      <button class="back-btn" onclick="goBack()">← Volver</button>
+      <div id="detalle-content"></div>
+    </div>
+
+    <!-- ── TICKETS ── -->
+    <div class="page" id="page-tickets">
+      <div class="toolbar">
+        <select class="filter-select" id="tk-filter-status" onchange="filterTickets()">
+          <option value="">Todos los estatus</option>
+          <option value="abierto">🔴 Abierto</option>
+          <option value="en_proceso">⚠️ En proceso</option>
+          <option value="cerrado">✅ Cerrado</option>
+        </select>
+      </div>
+      <div id="tickets-list"></div>
+    </div>
+
+    <!-- ── USUARIOS ── -->
+    <div class="page" id="page-usuarios">
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Hospital/Empresa</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="usuarios-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══ MODAL: EQUIPO ═══ -->
+<div class="modal-overlay" id="modal-equipo">
+  <div class="modal">
+    <h2>➕ Registrar Equipo</h2>
+    <div class="form-grid">
+      <div class="fg"><label>Código *</label><input id="f-codigo" placeholder="BIO-006"/></div>
+      <div class="fg"><label>Nombre *</label><input id="f-nombre" placeholder="Ventilador Mecánico B"/></div>
+      <div class="fg">
+        <label>Tipo *</label>
+        <select id="f-tipo">
+          <option>Ventilador mecánico</option><option>Monitor de signos vitales</option>
+          <option>Desfibrilador</option><option>Bomba de infusión</option>
+          <option>Cama hospitalaria</option><option>Electrobisturí</option>
+          <option>Monitor de anestesia</option><option>Lámpara quirúrgica</option>
+          <option>Oxímetro</option><option>Electrocardiógrafo</option>
+          <option>Camilla</option><option>Centrifugadora</option>
+          <option>Analizador de glucosa</option><option>Microscopio</option>
+          <option>Bomba de jeringa</option><option>Oxígeno portátil</option>
+          <option>Equipo de rayos X</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Área *</label>
+        <select id="f-area">
+          <option>UCI</option><option>Urgencias</option><option>Quirófano</option>
+          <option>Hospitalización</option><option>Laboratorio</option>
+          <option>Radiología</option><option>Consulta externa</option><option>Pediatría</option>
+        </select>
+      </div>
+      <div class="fg"><label>Marca</label><input id="f-marca" placeholder="Philips"/></div>
+      <div class="fg"><label>Modelo</label><input id="f-modelo" placeholder="MX450"/></div>
+      <div class="fg"><label>Número de serie</label><input id="f-serie" placeholder="SN-2025-001"/></div>
+      <div class="fg">
+        <label>Frecuencia *</label>
+        <select id="f-frecuencia">
+          <option value="1">Mensual</option><option value="3" selected>Trimestral (3m)</option>
+          <option value="6">Semestral (6m)</option><option value="12">Anual (12m)</option>
+        </select>
+      </div>
+      <div class="fg full"><label>Último mantenimiento</label><input type="date" id="f-ultimo"/></div>
+      <div class="fg full">
+        <label>Hospital / Empresa *</label>
+        <input id="f-empresa" placeholder="Ej: Hospital Regional del Norte" list="empresas-list"/>
+        <datalist id="empresas-list"></datalist>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-equipo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEquipo()">Guardar equipo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: MANTENIMIENTO ═══ -->
+<div class="modal-overlay" id="modal-mant">
+  <div class="modal">
+    <h2>🔧 Registrar Mantenimiento</h2>
+    <input type="hidden" id="m-equipo-id"/>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Tipo *</label>
+        <select id="m-tipo">
+          <option>Preventivo</option><option>Correctivo</option>
+          <option>Predictivo</option><option>Calibración</option>
+        </select>
+      </div>
+      <div class="fg"><label>Fecha *</label><input type="date" id="m-fecha"/></div>
+      <div class="fg full"><label>Técnico *</label><input id="m-tecnico" placeholder="Ing. Nombre Apellido"/></div>
+      <div class="fg full"><label>Descripción</label><textarea id="m-descripcion" placeholder="Trabajo realizado..."></textarea></div>
+      <div class="fg full"><label>Observaciones</label><textarea id="m-obs" placeholder="Notas adicionales..."></textarea></div>
+      <div class="fg"><label>Costo (MXN)</label><input type="number" id="m-costo" placeholder="0.00" step="0.01"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-mant')">Cancelar</button>
+      <button class="btn btn-success" onclick="guardarMantenimiento()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: USUARIO ═══ -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <h2>👤 Nuevo usuario</h2>
+    <div class="form-grid">
+      <div class="fg full"><label>Nombre *</label><input id="u-nombre" placeholder="Nombre completo"/></div>
+      <div class="fg full"><label>Email *</label><input type="email" id="u-email" placeholder="correo@ejemplo.com"/></div>
+      <div class="fg"><label>Contraseña *</label><input type="password" id="u-password" placeholder="••••••••"/></div>
+      <div class="fg">
+        <label>Rol *</label>
+        <select id="u-rol">
+          <option value="usuario">🔧 Usuario (Ingeniero)</option>
+          <option value="cliente">🏥 Cliente</option>
+          <option value="admin">👑 Administrador</option>
+        </select>
+      </div>
+      <div class="fg full">
+        <label>Hospital / Empresa</label>
+        <input id="u-empresa" placeholder="Ej: Hospital Regional del Norte"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarUsuario()">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ═══ MODAL: IMPORTAR CSV ═══ -->
+<div class="modal-overlay" id="modal-importar">
+  <div class="modal" style="max-width:640px">
+    <h2>📥 Importar equipos desde CSV</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1.2rem">
+      Carga un archivo CSV con los equipos a registrar. Las columnas deben seguir el formato de la plantilla.
+    </p>
+    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="descargarPlantilla()">⬇️ Descargar plantilla CSV</button>
+    </div>
+    <div class="fg" style="margin-bottom:1rem">
+      <label>Seleccionar archivo CSV *</label>
+      <input type="file" id="csv-file" accept=".csv,.txt" onchange="handleCSVFile(this)"
+        style="padding:.5rem;cursor:pointer"/>
+    </div>
+    <div id="csv-preview" style="margin-bottom:1rem"></div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:1rem">
+      <strong>Columnas requeridas:</strong> codigo, nombre, tipo, area, frecuencia_meses<br/>
+      <strong>Columnas opcionales:</strong> marca, modelo, num_serie, ultimo_mantenimiento, empresa
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-importar')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-importar" onclick="importarCSV()">Importar equipos</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: NUEVO TICKET ═══ -->
+<div class="modal-overlay" id="modal-nuevo-ticket">
+  <div class="modal">
+    <h2>🎫 Nuevo Ticket de Servicio</h2>
+    <div class="form-grid">
+      <div class="fg full">
+        <label>Equipo *</label>
+        <select id="nt-equipo"></select>
+      </div>
+      <div class="fg">
+        <label>Tipo de falla *</label>
+        <select id="nt-tipo">
+          <option value="">Selecciona...</option>
+          <option>Falla eléctrica</option>
+          <option>Falla mecánica</option>
+          <option>Error en pantalla / software</option>
+          <option>Ruido anormal</option>
+          <option>No enciende</option>
+          <option>Alarma constante</option>
+          <option>Solicitud de mantenimiento</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Tu nombre *</label>
+        <input id="nt-nombre" placeholder="Nombre completo"/>
+      </div>
+      <div class="fg full">
+        <label>Descripción *</label>
+        <textarea id="nt-descripcion" placeholder="Describe qué está pasando con el equipo..."></textarea>
+      </div>
+      <div class="fg">
+        <label>Contacto / Extensión</label>
+        <input id="nt-contacto" placeholder="Ext. 1234 o celular"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-nuevo-ticket')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarNuevoTicket()">Enviar ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: TICKET DETALLE ═══ -->
+<div class="modal-overlay" id="modal-ticket">
+  <div class="modal">
+    <h2 id="tk-modal-title">Ticket #—</h2>
+    <div id="tk-modal-body"></div>
+    <div class="modal-footer" id="tk-modal-footer"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  VERIFICACION INMEDIATA DE SESION
+// ═══════════════════════════════════════════
+(async () => {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    const d = await r.json();
+    if (!d.autenticado) { window.location.replace('/login.html'); }
+  } catch(e) { window.location.replace('/login.html'); }
+})();
+
+// ═══════════════════════════════════════════
+//  Estado global
+// ═══════════════════════════════════════════
+let USUARIO   = null;
+let allEquipos  = [];
+let allTickets  = [];
+let allUsuarios = [];
+let prevPage    = 'dashboard';
+
+// ═══════════════════════════════════════════
+//  INIT — Verificar sesión
+// ═══════════════════════════════════════════
+async function init() {
+  try {
+    const res  = await fetch('/api/auth/me', { credentials: 'include' });
+    const data = await res.json();
+    if (!data.autenticado) {
+      window.location.replace('/login.html');
+      return;
+    }
+    USUARIO = data.usuario;
+    renderSidebar();
+    renderUserPill();
+    showPage('dashboard');
+  } catch(e) {
+    window.location.replace('/login.html');
+  }
+}
+
+// ═══════════════════════════════════════════
+//  SIDEBAR — Menú según rol
+// ═══════════════════════════════════════════
+function renderSidebar() {
+  const { rol } = USUARIO;
+  const items = [];
+
+  if (rol !== 'cliente') {
+    items.push({ id:'dashboard', icon:'📊', label:'Dashboard' });
+    items.push({ id:'equipos',   icon:'🔧', label:'Equipos' });
+  }
+
+  items.push({ id:'tickets', icon:'🎫', label:'Help Desk', badge: true });
+
+  if (rol === 'admin') {
+    items.push({ id:'usuarios', icon:'👥', label:'Usuarios' });
+  }
+
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = items.map(item => `
+    <button class="nav-item" id="nav-${item.id}" onclick="showPage('${item.id}')">
+      <span class="icon">${item.icon}</span>
+      ${item.label}
+      ${item.badge ? `<span class="nav-badge" id="badge-tickets" style="display:none">0</span>` : ''}
+    </button>
+  `).join('');
+}
+
+function renderUserPill() {
+  const roles = { admin:'👑 Administrador', usuario:'🔧 Ingeniero', cliente:'🏥 Cliente' };
+  document.getElementById('user-name').textContent  = USUARIO.nombre;
+  document.getElementById('user-role').textContent  = roles[USUARIO.rol] || USUARIO.rol;
+  document.getElementById('user-avatar').textContent = USUARIO.nombre[0].toUpperCase();
+}
+
+// ═══════════════════════════════════════════
+//  NAVEGACIÓN
+// ═══════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+
+  const page = document.getElementById('page-' + name);
+  const nav  = document.getElementById('nav-' + name);
+  if (page) page.classList.add('active');
+  if (nav)  nav.classList.add('active');
+
+  const titles = { dashboard:'Dashboard', equipos:'Equipos', detalle:'Detalle', tickets:'Help Desk', usuarios:'Usuarios' };
+  document.getElementById('page-title').textContent = titles[name] || name;
+
+  // Acciones del topbar según página y rol
+  const actions = document.getElementById('topbar-actions');
+  actions.innerHTML = '';
+  if (name === 'equipos' && USUARIO.rol !== 'cliente') {
+    actions.innerHTML = `
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-importar')">📥 Importar CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-equipo')">+ Nuevo equipo</button>
+    `;
+    cargarEmpresasDatalist();
+  }
+  if (name === 'usuarios' && USUARIO.rol === 'admin') {
+    actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openModal('modal-usuario')">+ Nuevo usuario</button>`;
+  }
+  if (name === 'tickets') {
+    actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openNuevoTicket()">+ Nuevo ticket</button>`;
+  }
+
+  closeSidebar();
+
+  const loaders = { dashboard: loadDashboard, equipos: loadEquipos, tickets: loadTickets, usuarios: loadUsuarios };
+  if (loaders[name]) loaders[name]();
+}
+
+function goBack() {
+  showPage(prevPage === 'detalle' ? 'equipos' : prevPage);
+}
+
+// ═══════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════
+async function loadDashboard() {
+  const data = await api('/api/dashboard');
+
+  // KPIs equipos
+  document.getElementById('kpi-equipos').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total equipos</div><div class="kpi-value" style="color:var(--primary)">${data.equipos.total}</div></div>
+    <div class="kpi-card success"><div class="kpi-label">✅ Al día</div><div class="kpi-value">${data.equipos.al_dia}</div></div>
+    <div class="kpi-card warning"><div class="kpi-label">⚠️ Próximo</div><div class="kpi-value">${data.equipos.proximo}</div></div>
+    <div class="kpi-card danger"><div class="kpi-label">🔴 Vencido</div><div class="kpi-value">${data.equipos.vencido}</div></div>
+  `;
+
+  // KPIs tickets (solo admin y usuario)
+  if (USUARIO.rol !== 'cliente') {
+    document.getElementById('kpi-tickets').style.display = 'grid';
+    document.getElementById('kpi-tickets').innerHTML = `
+      <div class="kpi-card danger"><div class="kpi-label">🎫 Tickets abiertos</div><div class="kpi-value">${data.tickets.abiertos}</div></div>
+      <div class="kpi-card warning"><div class="kpi-label">⚙️ En proceso</div><div class="kpi-value">${data.tickets.en_proceso}</div></div>
+      <div class="kpi-card success"><div class="kpi-label">✅ Cerrados</div><div class="kpi-value">${data.tickets.cerrados}</div></div>
+      <div class="kpi-card info"><div class="kpi-label">⏱ Prom. resolución</div><div class="kpi-value" style="font-size:1.4rem">${data.tickets.promedio_horas}h</div></div>
+    `;
+  }
+
+  // Charts
+  const maxArea = Math.max(...Object.values(data.porArea), 1);
+  document.getElementById('chart-areas').innerHTML = `
+    <div class="bar-chart">${Object.entries(data.porArea).map(([area, n]) => `
+      <div class="bar-row">
+        <span class="bar-label">${area}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(n/maxArea)*100}%"></div></div>
+        <span class="bar-count">${n}</span>
+      </div>`).join('')}
+    </div>`;
+
+  const maxFallas = Math.max(...data.equiposCriticos.map(e => e.fallas), 1);
+  document.getElementById('chart-criticos').innerHTML = data.equiposCriticos.length
+    ? `<div class="bar-chart">${data.equiposCriticos.map(e => `
+        <div class="bar-row">
+          <span class="bar-label">${e.nombre}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(e.fallas/maxFallas)*100}%;background:var(--danger)"></div></div>
+          <span class="bar-count">${e.fallas}</span>
+        </div>`).join('')}
+      </div>`
+    : '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem">Sin fallas registradas 🎉</p>';
+
+  // Alertas
+  const al = document.getElementById('alertas-list');
+  al.innerHTML = data.alertas.length === 0
+    ? '<p style="color:var(--muted);text-align:center;padding:1rem">Sin alertas pendientes 🎉</p>'
+    : data.alertas.map(eq => `
+      <div class="alert-item">
+        <span class="badge ${eq.estado}">${badgeLabel(eq.estado)}</span>
+        <div class="alert-info">
+          <p class="name">${eq.nombre}</p>
+          <p class="sub">${eq.codigo} · ${eq.area} · Próximo: ${fmtDate(eq.proximo_mantenimiento)}</p>
+        </div>
+        <span class="dias-chip" style="color:${eq.dias_restantes < 0 ? 'var(--danger)' : 'var(--warning)'}">
+          ${eq.dias_restantes < 0 ? Math.abs(eq.dias_restantes)+'d vencido' : 'en '+eq.dias_restantes+'d'}
+        </span>
+        <button class="btn btn-ghost btn-sm" onclick="verDetalle(${eq.id})">Ver</button>
+      </div>`).join('');
+
+  // Badge tickets
+  const badge = document.getElementById('badge-tickets');
+  if (badge && data.tickets.abiertos > 0) {
+    badge.textContent    = data.tickets.abiertos;
+    badge.style.display  = 'inline-block';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  EQUIPOS
+// ═══════════════════════════════════════════
+async function loadEquipos() {
+  allEquipos = await api('/api/equipos');
+  renderEquipos(allEquipos);
+}
+
+function renderEquipos(list) {
+  const tbody = document.getElementById('equipos-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No se encontraron equipos</td></tr>';
+    return;
+  }
+  const canDelete = USUARIO.rol === 'admin';
+  tbody.innerHTML = list.map(eq => `
+    <tr>
+      <td><span class="code-chip">${eq.codigo}</span></td>
+      <td><strong>${eq.nombre}</strong></td>
+      <td style="color:var(--muted)">${eq.tipo}</td>
+      <td>${eq.area}</td>
+      <td style="color:var(--muted)">${fmtDate(eq.proximo_mantenimiento) || '—'}</td>
+      <td><span class="badge ${eq.estado}">${badgeLabel(eq.estado)}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="verDetalle(${eq.id})">Ver</button>
+        ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="eliminarEquipo(${eq.id},'${eq.nombre}')">🗑</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+function filterEquipos() {
+  const q      = document.getElementById('eq-search').value.toLowerCase();
+  const estado = document.getElementById('eq-filter-estado').value;
+  renderEquipos(allEquipos.filter(eq =>
+    [eq.codigo,eq.nombre,eq.tipo,eq.area].some(v => v?.toLowerCase().includes(q)) &&
+    (!estado || eq.estado === estado)
+  ));
+}
+
+async function verDetalle(id) {
+  prevPage = document.querySelector('.page.active')?.id?.replace('page-','') || 'equipos';
+  const data = await api(`/api/equipos/${id}`);
+  const eq   = data.equipo;
+  const mants = data.mantenimientos;
+  const tickets = data.tickets || [];
+
+  const iconos = {'Ventilador mecánico':'🫁','Monitor de signos vitales':'💓','Desfibrilador':'⚡','Bomba de infusión':'💉','Cama hospitalaria':'🛏️','Oxímetro':'🩺','Electrobisturí':'⚔️','Centrifugadora':'🔬','Microscopio':'🔭'};
+  const canMant = USUARIO.rol !== 'cliente';
+
+  document.getElementById('detalle-content').innerHTML = `
+    <div class="detail-hero">
+      <div class="detail-icon">${iconos[eq.tipo]||'🔧'}</div>
+      <div class="detail-meta" style="flex:1">
+        <h2>${eq.nombre} <span class="badge ${eq.estado}">${badgeLabel(eq.estado)}</span></h2>
+        <p>${eq.tipo} · ${eq.area}</p>
+        <span class="code-chip">📛 ${eq.codigo}</span>
+        <div class="props-grid">
+          <div class="prop"><p class="key">Marca</p><p class="val">${eq.marca||'—'}</p></div>
+          <div class="prop"><p class="key">Modelo</p><p class="val">${eq.modelo||'—'}</p></div>
+          <div class="prop"><p class="key">N° Serie</p><p class="val">${eq.num_serie||'—'}</p></div>
+          <div class="prop"><p class="key">Frecuencia</p><p class="val">Cada ${eq.frecuencia_meses} meses</p></div>
+          <div class="prop"><p class="key">Último mant.</p><p class="val">${fmtDate(eq.ultimo_mantenimiento)||'—'}</p></div>
+          <div class="prop"><p class="key">Próximo mant.</p><p class="val">${fmtDate(eq.proximo_mantenimiento)||'—'}</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h3>📋 Mantenimientos (${mants.length})</h3>
+      ${canMant ? `<button class="btn btn-success btn-sm" onclick="openMantModal(${eq.id})">+ Registrar</button>` : ''}
+    </div>
+    ${mants.length === 0
+      ? '<p style="color:var(--muted);font-size:.85rem">Sin mantenimientos registrados.</p>'
+      : mants.map(m => `
+        <div class="hist-item ${m.tipo}">
+          <div class="hist-row">
+            <span class="tipo">${m.tipo}</span>
+            <span class="fecha">${fmtDate(m.fecha)} · ${m.tecnico}</span>
+          </div>
+          <div class="hist-body">
+            ${m.descripcion  ? `📝 ${m.descripcion}<br>` : ''}
+            ${m.observaciones? `💬 ${m.observaciones}<br>` : ''}
+            ${m.costo        ? `💰 $${Number(m.costo).toLocaleString('es-MX',{minimumFractionDigits:2})} MXN` : ''}
+          </div>
+        </div>`).join('')
+    }
+
+    ${tickets.length > 0 ? `
+      <div class="section-header" style="margin-top:1.4rem">
+        <h3>🎫 Tickets (${tickets.length})</h3>
+      </div>
+      ${tickets.map(t => `
+        <div class="ticket-card">
+          <div class="ticket-header">
+            <div>
+              <p class="ticket-num">#${t.id}</p>
+              <p class="ticket-title">${t.tipo_falla}</p>
+            </div>
+            <span class="badge ${t.estatus}">${ticketLabel(t.estatus)}</span>
+          </div>
+          <p class="ticket-meta">
+            <span>👤 ${t.reportado_por}</span>
+            <span>📅 ${fmtDateTime(t.fecha_creacion)}</span>
+          </p>
+        </div>`).join('')}` : ''}
+  `;
+
+  showPage('detalle');
+}
+
+async function guardarEquipo() {
+  const body = {
+    codigo:               document.getElementById('f-codigo').value.trim(),
+    nombre:               document.getElementById('f-nombre').value.trim(),
+    tipo:                 document.getElementById('f-tipo').value,
+    area:                 document.getElementById('f-area').value,
+    marca:                document.getElementById('f-marca').value.trim(),
+    modelo:               document.getElementById('f-modelo').value.trim(),
+    num_serie:            document.getElementById('f-serie').value.trim(),
+    frecuencia_meses:     parseInt(document.getElementById('f-frecuencia').value),
+    ultimo_mantenimiento: document.getElementById('f-ultimo').value || null,
+    empresa:              document.getElementById('f-empresa').value.trim(),
+  };
+  if (!body.codigo || !body.nombre) return alert('Completa los campos obligatorios.');
+  const res = await api('/api/equipos', 'POST', body);
+  if (res.error) return alert(res.error);
+  closeModal('modal-equipo');
+  loadEquipos();
+}
+
+async function eliminarEquipo(id, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}" y todo su historial?`)) return;
+  await api(`/api/equipos/${id}`, 'DELETE');
+  loadEquipos();
+}
+
+// ═══════════════════════════════════════════
+//  MANTENIMIENTOS
+// ═══════════════════════════════════════════
+function openMantModal(equipoId) {
+  document.getElementById('m-equipo-id').value = equipoId;
+  document.getElementById('m-fecha').value      = new Date().toISOString().split('T')[0];
+  document.getElementById('m-tecnico').value    = USUARIO.nombre;
+  openModal('modal-mant');
+}
+
+async function guardarMantenimiento() {
+  const body = {
+    equipo_id:    parseInt(document.getElementById('m-equipo-id').value),
+    tipo:         document.getElementById('m-tipo').value,
+    fecha:        document.getElementById('m-fecha').value,
+    tecnico:      document.getElementById('m-tecnico').value.trim(),
+    descripcion:  document.getElementById('m-descripcion').value.trim(),
+    observaciones:document.getElementById('m-obs').value.trim(),
+    costo:        parseFloat(document.getElementById('m-costo').value) || null,
+  };
+  if (!body.fecha || !body.tecnico) return alert('Fecha y técnico son obligatorios.');
+  const res = await api('/api/mantenimientos', 'POST', body);
+  if (res.error) return alert(res.error);
+  closeModal('modal-mant');
+  verDetalle(body.equipo_id);
+}
+
+// ═══════════════════════════════════════════
+//  TICKETS
+// ═══════════════════════════════════════════
+async function loadTickets() {
+  allTickets = await api('/api/tickets');
+  filterTickets();
+}
+
+function filterTickets() {
+  const status = document.getElementById('tk-filter-status').value;
+  const list   = allTickets.filter(t => !status || t.estatus === status);
+  renderTickets(list);
+}
+
+function renderTickets(list) {
+  const container = document.getElementById('tickets-list');
+  if (!list.length) {
+    container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:3rem">No hay tickets en esta categoría.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(t => `
+    <div class="ticket-card" onclick="abrirTicket(${t.id})" style="cursor:pointer">
+      <div class="ticket-header">
+        <div>
+          <p class="ticket-num">Ticket #${t.id} · ${t.equipo?.nombre || '—'}</p>
+          <p class="ticket-title">${t.tipo_falla}</p>
+        </div>
+        <span class="badge ${t.estatus}">${ticketLabel(t.estatus)}</span>
+      </div>
+      <p style="font-size:.84rem;color:var(--muted);margin:.4rem 0">${t.descripcion}</p>
+      <div class="ticket-meta">
+        <span>👤 ${t.reportado_por}</span>
+        ${t.asignado_a ? `<span>🔧 ${t.asignado_a}</span>` : ''}
+        <span>📅 ${fmtDateTime(t.fecha_creacion)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function abrirTicket(id) {
+  const t = allTickets.find(x => x.id === id);
+  if (!t) return;
+
+  document.getElementById('tk-modal-title').textContent = `Ticket #${t.id}`;
+
+  // Cargar técnicos para el select de asignación
+  const tecnicos = (USUARIO.rol !== 'cliente') ? await api('/api/usuarios/tecnicos') : [];
+
+  const puedeAtender = USUARIO.rol !== 'cliente';
+  const puedeAsignar = USUARIO.rol === 'admin';
+
+  document.getElementById('tk-modal-body').innerHTML = `
+    <p style="margin-bottom:.75rem"><span class="badge ${t.estatus}">${ticketLabel(t.estatus)}</span></p>
+    <div class="prop" style="margin-bottom:.75rem"><p class="key">Equipo</p><p class="val">${t.equipo?.nombre || '—'} · ${t.equipo?.area || ''}</p></div>
+    <div class="prop" style="margin-bottom:.75rem"><p class="key">Tipo de falla</p><p class="val">${t.tipo_falla}</p></div>
+    <div class="prop" style="margin-bottom:.75rem"><p class="key">Descripción</p><p class="val" style="font-weight:400;color:var(--muted)">${t.descripcion}</p></div>
+    <div class="prop" style="margin-bottom:.75rem"><p class="key">Reportado por</p><p class="val">${t.reportado_por} ${t.contacto ? '· '+t.contacto : ''}</p></div>
+    <div class="prop" style="margin-bottom:1.2rem"><p class="key">Fecha</p><p class="val">${fmtDateTime(t.fecha_creacion)}</p></div>
+    ${puedeAtender && t.estatus !== 'cerrado' ? `
+      <div class="fg" style="margin-bottom:.75rem">
+        <label>Notas del técnico</label>
+        <textarea id="tk-notas" placeholder="Describe lo que se hizo...">${t.notas_tecnico||''}</textarea>
+      </div>` : t.notas_tecnico ? `<div class="prop"><p class="key">Notas técnicas</p><p class="val" style="font-weight:400;color:var(--muted)">${t.notas_tecnico}</p></div>` : ''}
+    ${puedeAsignar && t.estatus !== 'cerrado' ? `
+      <div class="fg">
+        <label>Asignar a</label>
+        <input id="tk-asignado" value="${t.asignado_a||''}" placeholder="Nombre del técnico"/>
+      </div>` : t.asignado_a ? `<div class="prop"><p class="key">Asignado a</p><p class="val">${t.asignado_a}</p></div>` : ''}
+  `;
+
+  const footer = document.getElementById('tk-modal-footer');
+  footer.innerHTML = `<button class="btn btn-ghost" onclick="closeModal('modal-ticket')">Cerrar</button>`;
+
+  if (puedeAtender && t.estatus === 'abierto') {
+    footer.innerHTML += `<button class="btn btn-primary" onclick="actualizarTicket(${t.id},'en_proceso')">Tomar ticket</button>`;
+  }
+  if (puedeAtender && t.estatus === 'en_proceso') {
+    footer.innerHTML += `<button class="btn btn-success" onclick="actualizarTicket(${t.id},'cerrado')">Cerrar ticket</button>`;
+  }
+
+  openModal('modal-ticket');
+}
+
+async function actualizarTicket(id, estatus) {
+  const notas       = document.getElementById('tk-notas')?.value || null;
+  const selAsig     = document.getElementById('tk-asignado');
+  const asignado_a_id = selAsig ? parseInt(selAsig.value) || null : null;
+  const asignado_a  = selAsig ? selAsig.options[selAsig.selectedIndex]?.text || null : null;
+  const res = await api(`/api/tickets/${id}`, 'PUT', { estatus, notas_tecnico: notas, asignado_a, asignado_a_id });
+  if (res.error) return alert(res.error);
+  closeModal('modal-ticket');
+  loadTickets();
+}
+
+// ═══════════════════════════════════════════
+//  USUARIOS
+// ═══════════════════════════════════════════
+async function loadUsuarios() {
+  allUsuarios = await api('/api/usuarios');
+  const roles = { admin:'👑 Admin', usuario:'🔧 Usuario', cliente:'🏥 Cliente' };
+  document.getElementById('usuarios-tbody').innerHTML = allUsuarios.map(u => `
+    <tr>
+      <td><strong>${u.nombre}</strong></td>
+      <td style="color:var(--muted)">${u.email}</td>
+      <td><span class="badge ${u.rol}">${roles[u.rol]||u.rol}</span></td>
+      <td style="color:var(--muted)">${u.empresa||'—'}</td>
+      <td><span class="badge ${u.activo ? 'al_dia' : 'vencido'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td>
+        ${u.id !== USUARIO.id ? `<button class="btn btn-danger btn-sm" onclick="desactivarUsuario(${u.id},'${u.nombre}')">Desactivar</button>` : '—'}
+      </td>
+    </tr>`).join('');
+}
+
+async function guardarUsuario() {
+  const body = {
+    nombre:   document.getElementById('u-nombre').value.trim(),
+    email:    document.getElementById('u-email').value.trim(),
+    password: document.getElementById('u-password').value,
+    rol:      document.getElementById('u-rol').value,
+    empresa:  document.getElementById('u-empresa').value.trim(),
+  };
+  if (!body.nombre || !body.email || !body.password) return alert('Completa todos los campos.');
+  const res = await api('/api/usuarios', 'POST', body);
+  if (res.error) return alert(res.error);
+  closeModal('modal-usuario');
+  loadUsuarios();
+}
+
+async function desactivarUsuario(id, nombre) {
+  if (!confirm(`¿Desactivar a "${nombre}"?`)) return;
+  await api(`/api/usuarios/${id}`, 'DELETE');
+  loadUsuarios();
+}
+
+
+
+// ═══════════════════════════════════════════
+//  DATALIST EMPRESAS
+// ═══════════════════════════════════════════
+async function cargarEmpresasDatalist() {
+  const empresas = await api('/api/equipos/empresas');
+  const dl = document.getElementById('empresas-list');
+  if (dl) dl.innerHTML = empresas.map(e => `<option value="${e}">`).join('');
+}
+
+// ═══════════════════════════════════════════
+//  IMPORTAR CSV / EXCEL
+// ═══════════════════════════════════════════
+function handleCSVFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text   = e.target.result;
+    const rows   = text.trim().split('\n').map(r => r.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+    const header = rows[0].map(h => h.toLowerCase().replace(/ /g,'_'));
+    const data   = rows.slice(1).map(row => {
+      const obj = {};
+      header.forEach((h, i) => obj[h] = row[i] || '');
+      return obj;
+    }).filter(r => r.codigo);
+
+    const preview = document.getElementById('csv-preview');
+    preview.innerHTML = `
+      <p style="color:var(--muted);font-size:.82rem;margin-bottom:.6rem">Vista previa — ${data.length} equipos encontrados:</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>${header.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${data.slice(0,5).map(r=>`<tr>${header.map(h=>`<td style="font-size:.8rem">${r[h]||'—'}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+      ${data.length>5 ? `<p style="color:var(--muted);font-size:.78rem;margin-top:.4rem">...y ${data.length-5} más</p>` : ''}
+    `;
+    preview.dataset.equipos = JSON.stringify(data);
+  };
+  reader.readAsText(file);
+}
+
+async function importarCSV() {
+  const preview = document.getElementById('csv-preview');
+  const equipos = JSON.parse(preview.dataset.equipos || '[]');
+  if (!equipos.length) return alert('Carga un archivo CSV primero.');
+
+  const btn = document.getElementById('btn-importar');
+  btn.disabled = true; btn.textContent = 'Importando...';
+
+  const res = await api('/api/equipos/importar', 'POST', { equipos });
+  if (res.error) { alert(res.error); btn.disabled=false; btn.textContent='Importar'; return; }
+
+  closeModal('modal-importar');
+  loadEquipos();
+  alert(`✅ ${res.importados} equipos importados${res.errores.length ? '\n⚠️ Errores:\n'+res.errores.join('\n') : ''}`);
+  btn.disabled=false; btn.textContent='Importar';
+}
+
+function descargarPlantilla() {
+  const csv = [
+    'codigo,nombre,tipo,area,marca,modelo,num_serie,frecuencia_meses,ultimo_mantenimiento,empresa',
+    'BIO-010,Ventilador UCI 2,Ventilador mecánico,UCI,Maquet,SERVO-i,SN-2025-010,3,2025-01-15,Hospital Regional del Norte',
+    'BIO-011,Monitor Urgencias 2,Monitor de signos vitales,Urgencias,Philips,MX450,SN-2025-011,6,2025-02-01,Hospital Regional del Norte',
+  ].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'plantilla_equipos.csv';
+  a.click();
+}
+
+// ═══════════════════════════════════════════
+//  NUEVO TICKET (todos los roles)
+// ═══════════════════════════════════════════
+async function openNuevoTicket() {
+  // Cargar equipos en el select
+  if (!allEquipos.length) allEquipos = await api('/api/equipos');
+  const sel = document.getElementById('nt-equipo');
+  sel.innerHTML = allEquipos.map(e => `<option value="${e.id}">${e.nombre} (${e.area})</option>`).join('');
+  // Pre-llenar nombre con el usuario logueado
+  document.getElementById('nt-nombre').value = USUARIO.nombre;
+  openModal('modal-nuevo-ticket');
+}
+
+async function guardarNuevoTicket() {
+  const equipo_id    = document.getElementById('nt-equipo').value;
+  const tipo_falla   = document.getElementById('nt-tipo').value;
+  const descripcion  = document.getElementById('nt-descripcion').value.trim();
+  const reportado_por= document.getElementById('nt-nombre').value.trim();
+  const contacto     = document.getElementById('nt-contacto').value.trim();
+
+  if (!equipo_id || !tipo_falla || !descripcion || !reportado_por) {
+    return alert('Completa los campos obligatorios.');
+  }
+
+  const res = await api('/api/tickets', 'POST', { equipo_id, tipo_falla, descripcion, reportado_por, contacto });
+  if (res.error) return alert(res.error);
+  closeModal('modal-nuevo-ticket');
+  // Limpiar form
+  document.getElementById('nt-tipo').value = '';
+  document.getElementById('nt-descripcion').value = '';
+  document.getElementById('nt-contacto').value = '';
+  loadTickets();
+  alert('✅ Ticket enviado correctamente');
+}
+
+// ═══════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+}
+
+// ═══════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ═══════════════════════════════════════════
+//  SIDEBAR MOBILE
+// ═══════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: {}, credentials: 'include' };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const res  = await fetch(url, opts);
+  return res.json();
+}
+
+function fmtDate(d) {
+  if (!d) return null;
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX') + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function badgeLabel(e) {
+  return { al_dia:'✅ Al día', proximo:'⚠️ Próximo', vencido:'🔴 Vencido', sin_fecha:'— Sin fecha' }[e] || e;
+}
+
+function ticketLabel(e) {
+  return { abierto:'🔴 Abierto', en_proceso:'⚠️ En proceso', cerrado:'✅ Cerrado' }[e] || e;
+}
+
+// ═══════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
