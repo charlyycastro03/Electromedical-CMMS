@@ -3,6 +3,7 @@
 --  Ejecutar en: Supabase Dashboard > SQL Editor
 -- ============================================
 
+DROP TABLE IF EXISTS session CASCADE;
 DROP TABLE IF EXISTS tickets CASCADE;
 DROP TABLE IF EXISTS mantenimientos CASCADE;
 DROP TABLE IF EXISTS equipos CASCADE;
@@ -68,6 +69,15 @@ CREATE TABLE tickets (
   fecha_atencion TIMESTAMP,
   fecha_cierre TIMESTAMP
 );
+
+-- Tabla: sesiones (para connect-pg-simple)
+CREATE TABLE IF NOT EXISTS session (
+  sid VARCHAR NOT NULL COLLATE "default",
+  sess JSON NOT NULL,
+  expire TIMESTAMP(6) NOT NULL,
+  PRIMARY KEY (sid)
+);
+CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire);
 
 -- ============================================
 --  Datos de prueba (Seed)
