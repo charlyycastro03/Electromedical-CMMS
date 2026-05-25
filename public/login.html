@@ -66,6 +66,8 @@
     }
     .empresa-field{display:none;}
     .role-note{font-size:.75rem;color:var(--muted);margin-top:.3rem;}
+    .pwd-toggle{position:absolute;right:10px;bottom:10px;cursor:pointer;font-size:1rem;user-select:none;opacity:.6;transition:opacity .15s;}
+    .pwd-toggle:hover{opacity:1;}
   </style>
 </head>
 <body>
@@ -86,9 +88,10 @@
       <label>Correo electrónico</label>
       <input type="email" id="l-email" placeholder="usuario@electromedical.com" autocomplete="email"/>
     </div>
-    <div class="form-group">
+    <div class="form-group" style="position:relative">
       <label>Contraseña</label>
-      <input type="password" id="l-password" placeholder="••••••••" autocomplete="current-password"/>
+      <input type="password" id="l-password" placeholder="••••••••" autocomplete="current-password" style="padding-right:36px"/>
+      <span class="pwd-toggle" onclick="togglePwd('l-password',this)">👁️</span>
     </div>
     <button class="btn" id="btn-login" onclick="login()">Iniciar sesión</button>
     <div class="msg error" id="login-error"></div>
@@ -109,9 +112,10 @@
       <label>Correo electrónico *</label>
       <input type="email" id="r-email" placeholder="correo@ejemplo.com"/>
     </div>
-    <div class="form-group">
+    <div class="form-group" style="position:relative">
       <label>Contraseña *</label>
-      <input type="password" id="r-password" placeholder="Mínimo 6 caracteres"/>
+      <input type="password" id="r-password" placeholder="Mínimo 6 caracteres" style="padding-right:36px"/>
+      <span class="pwd-toggle" onclick="togglePwd('r-password',this)">👁️</span>
     </div>
     <div class="form-group">
       <label>Tipo de cuenta *</label>
@@ -193,6 +197,11 @@
       err.textContent=data.error||'Error al crear la cuenta.'; err.style.display='block';
       btn.disabled=false; btn.textContent='Crear cuenta';
     }
+  }
+  function togglePwd(id, el) {
+    const inp = document.getElementById(id);
+    if (inp.type === 'password') { inp.type = 'text'; el.textContent = '🙈'; }
+    else { inp.type = 'password'; el.textContent = '👁️'; }
   }
 </script>
 </body>
