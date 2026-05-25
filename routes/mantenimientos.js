@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { requireRol } = require('../middleware/auth');
-const { getEquipoById, createMantenimiento, updateEquipoFechas, deleteMantenimiento, query } = require('../utils/db');
+const { getEquipoById, createMantenimiento, updateEquipoFechas, deleteMantenimiento, getMantenimientoById } = require('../utils/db');
 
 router.post('/', requireRol('admin','usuario'), async (req, res) => {
   try {
@@ -19,8 +19,8 @@ router.post('/', requireRol('admin','usuario'), async (req, res) => {
 
 router.delete('/:id', requireRol('admin'), async (req, res) => {
   try {
-    const r = await query('SELECT id FROM mantenimientos WHERE id = $1', [parseInt(req.params.id)]);
-    if (!r.rows.length) return res.status(404).json({ error: 'Mantenimiento no encontrado.' });
+    const mant = await getMantenimientoById(parseInt(req.params.id));
+    if (!mant) return res.status(404).json({ error: 'Mantenimiento no encontrado.' });
     await deleteMantenimiento(parseInt(req.params.id));
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: 'Error interno.' }); }

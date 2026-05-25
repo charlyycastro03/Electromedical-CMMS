@@ -79,6 +79,19 @@ CREATE TABLE IF NOT EXISTS session (
 );
 CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire);
 
+-- Función: actualizar estados de equipos (usada por REST API)
+CREATE OR REPLACE FUNCTION actualizar_estados_equipos()
+RETURNS void
+LANGUAGE sql
+AS $$
+  UPDATE equipos SET estado = CASE
+    WHEN proximo_mantenimiento IS NULL THEN 'sin_fecha'
+    WHEN proximo_mantenimiento < CURRENT_DATE THEN 'vencido'
+    WHEN proximo_mantenimiento <= CURRENT_DATE + INTERVAL '30 days' THEN 'proximo'
+    ELSE 'al_dia'
+  END;
+$$;
+
 -- ============================================
 --  Datos de prueba (Seed)
 --  Las contraseñas se generan con bcrypt.

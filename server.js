@@ -2,24 +2,9 @@ const express = require('express');
 const session = require('express-session');
 const cors    = require('cors');
 const path    = require('path');
-const { pool } = require('./utils/db');
-const pgSession = require('connect-pg-simple')(session);
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
-
-let dbConnected = false;
-
-if (!process.env.DATABASE_URL) {
-  console.error('ERROR: Falta DATABASE_URL en variables de entorno');
-} else {
-  pool.query('SELECT 1').then(() => {
-    dbConnected = true;
-    console.log(' Conectado a PostgreSQL');
-  }).catch(err => {
-    console.error(' ERROR conexion DB:', err.message);
-  });
-}
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
@@ -34,30 +19,38 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/api/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1');
-    const tables = (await pool.query(`
-      SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
-    `)).rows.map(r => r.table_name);
-    const counts = {};
-    for (const t of tables) {
-      const r = await pool.query(`SELECT COUNT(*)::int AS c FROM "${t}"`);
-      counts[t] = r.rows[0].c;
-    }
-    res.json({ db: true, tables: counts, env: { DATABASE_URL: !!process.env.DATABASE_URL, VERCEL: !!process.env.VERCEL } });
-  } catch (e) {
-    res.json({ db: false, error: e.message, env: { DATABASE_URL: !!process.env.DATABASE_URL, VERCEL: !!process.env.VERCEL } });
-  }
-});
-
 app.use(session({
-  store: new pgSession({ pool, tableName: 'session' }),
   secret:            process.env.SESSION_SECRET || 'electromedical-secret-2026',
   resave:            false,
   saveUninitialized: false,
   cookie:            { secure: !!process.env.VERCEL, httpOnly: true, sameSite: 'lax', maxAge: 8 * 60 * 60 * 1000 },
 }));
+
+app.get('/api/health', async (req, res) => {
+  try {
+    const r = await fetch(`${process.env.SUPABASE_URL || 'https://lwhaqmifmdmnwbobjlsn.supabase.co'}/rest/v1/usuarios?select=id&limit=1`, {
+      headers: {
+        'apikey': process.env.SUPABASE_KEY || 'sb_publishable_96TEtks4Hr2Y3jF4d1xSMg_amc7K6B6',
+        'Authorization': `Bearer ${process.env.SUPABASE_KEY || 'sb_publishable_96TEtks4Hr2Y3jF4d1xSMg_amc7K6B6'}`
+      }
+    });
+    const tables = ['usuarios','equipos','mantenimientos','tickets'];
+    const counts = {};
+    for (const t of tables) {
+      const data = await fetch(`${process.env.SUPABASE_URL || 'https://lwhaqmifmdmnwbobjlsn.supabase.co'}/rest/v1/${t}?select=id&limit=1000`, {
+        headers: {
+          'apikey': process.env.SUPABASE_KEY || 'sb_publishable_96TEtks4Hr2Y3jF4d1xSMg_amc7K6B6',
+          'Authorization': `Bearer ${process.env.SUPABASE_KEY || 'sb_publishable_96TEtks4Hr2Y3jF4d1xSMg_amc7K6B6'}`
+        }
+      });
+      const rows = await data.json();
+      counts[t] = Array.isArray(rows) ? rows.length : 0;
+    }
+    res.json({ db: r.ok, tables: counts, env: { SUPABASE_URL: !!process.env.SUPABASE_URL, SUPABASE_KEY: !!process.env.SUPABASE_KEY, VERCEL: !!process.env.VERCEL } });
+  } catch (e) {
+    res.json({ db: false, error: e.message, env: { SUPABASE_URL: !!process.env.SUPABASE_URL, SUPABASE_KEY: !!process.env.SUPABASE_KEY, VERCEL: !!process.env.VERCEL } });
+  }
+});
 
 app.use('/api/auth',            require('./routes/auth'));
 app.use('/api/equipos',         require('./routes/equipos'));

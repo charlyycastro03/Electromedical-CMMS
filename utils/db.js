@@ -1,17 +1,23 @@
-const { Pool } = require('pg');
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lwhaqmifmdmnwbobjlsn.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_96TEtks4Hr2Y3jF4d1xSMg_amc7K6B6';
+const API = `${SUPABASE_URL}/rest/v1`;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
 
-async function query(text, params) {
-  const client = await pool.connect();
-  try {
-    return await client.query(text, params);
-  } finally {
-    client.release();
+async function api(path, opts = {}) {
+  const url = `${API}/${path}`;
+  const res = await fetch(url, { ...opts, headers: { ...headers, ...opts.headers } });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase ${res.status}: ${text}`);
   }
+  if (res.status === 204) return null;
+  return res.json();
 }
 
 function hoy() { return new Date().toISOString().split('T')[0]; }
@@ -32,190 +38,175 @@ function calcularEstado(proximo) {
 }
 
 async function actualizarEstados() {
-  await query(`
-    UPDATE equipos SET estado = CASE
-      WHEN proximo_mantenimiento IS NULL THEN 'sin_fecha'
-      WHEN proximo_mantenimiento < CURRENT_DATE THEN 'vencido'
-      WHEN proximo_mantenimiento <= CURRENT_DATE + INTERVAL '30 days' THEN 'proximo'
-      ELSE 'al_dia'
-    END
-  `);
+  await api('rpc/actualizar_estados_equipos', { method: 'POST', body: '{}' });
 }
 
 // ── Usuarios ──────────────────────────────────
 
 async function findUserByEmail(email) {
-  const r = await query('SELECT * FROM usuarios WHERE email = $1 AND activo = true', [email]);
-  return r.rows[0] || null;
+  const users = await api(`usuarios?email=eq.${encodeURIComponent(email)}&activo=eq.true&select=*`);
+  return users[0] || null;
 }
 
 async function findUserByEmailAll(email) {
-  const r = await query('SELECT * FROM usuarios WHERE email = $1', [email]);
-  return r.rows[0] || null;
+  const users = await api(`usuarios?email=eq.${encodeURIComponent(email)}&select=*`);
+  return users[0] || null;
 }
 
 async function createUser({ nombre, email, password, rol, empresa }) {
-  const r = await query(
-    'INSERT INTO usuarios (nombre, email, password, rol, empresa) VALUES ($1,$2,$3,$4,$5) RETURNING id, nombre, email, rol, empresa, activo, fecha_registro',
-    [nombre, email, password, rol, empresa || 'Electromedical']
-  );
-  return r.rows[0];
+  const users = await api('usuarios', {
+    method: 'POST',
+    body: JSON.stringify({ nombre, email, password, rol, empresa: empresa || 'Electromedical' })
+  });
+  const { password: _, ...seguro } = users[0];
+  return seguro;
 }
 
 async function getActiveTechnicians() {
-  const r = await query("SELECT id, nombre, email, rol, empresa, activo, fecha_registro FROM usuarios WHERE activo = true AND rol != 'cliente'");
-  return r.rows;
+  return api("usuarios?activo=eq.true&rol=neq.cliente&select=id,nombre,email,rol,empresa,activo,fecha_registro");
 }
 
 async function getAllUsers() {
-  const r = await query('SELECT id, nombre, email, rol, empresa, activo, fecha_registro FROM usuarios');
-  return r.rows;
+  return api("usuarios?select=id,nombre,email,rol,empresa,activo,fecha_registro");
 }
 
 async function deactivateUser(id) {
-  await query('UPDATE usuarios SET activo = false WHERE id = $1', [id]);
+  await api(`usuarios?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) });
 }
 
 // ── Equipos ──────────────────────────────────
 
 async function getAllEquipos() {
-  const r = await query('SELECT * FROM equipos ORDER BY estado ASC');
-  return r.rows;
+  return api('equipos?order=estado.asc&select=*');
 }
 
 async function getEquiposByEmpresa(empresa) {
-  const r = await query('SELECT * FROM equipos WHERE empresa = $1 ORDER BY estado ASC', [empresa]);
-  return r.rows;
+  return api(`equipos?empresa=eq.${encodeURIComponent(empresa)}&order=estado.asc&select=*`);
 }
 
 async function getEquipoById(id) {
-  const r = await query('SELECT * FROM equipos WHERE id = $1', [id]);
-  return r.rows[0] || null;
+  const eqs = await api(`equipos?id=eq.${id}&select=*`);
+  return eqs[0] || null;
 }
 
 async function getEquipoByCodigo(codigo) {
-  const r = await query('SELECT * FROM equipos WHERE codigo = $1', [codigo]);
-  return r.rows[0] || null;
+  const eqs = await api(`equipos?codigo=eq.${encodeURIComponent(codigo)}&select=*`);
+  return eqs[0] || null;
 }
 
 async function createEquipo({ codigo, nombre, tipo, area, marca, modelo, num_serie, frecuencia_meses, ultimo_mantenimiento, empresa }) {
   const proximo = calcularProxima(ultimo_mantenimiento, frecuencia_meses);
   const estado = calcularEstado(proximo);
-  const r = await query(
-    `INSERT INTO equipos (codigo, nombre, tipo, area, marca, modelo, num_serie, frecuencia_meses, ultimo_mantenimiento, proximo_mantenimiento, empresa, estado)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-    [codigo, nombre, tipo, area, marca||null, modelo||null, num_serie||null, parseInt(frecuencia_meses), ultimo_mantenimiento||null, proximo, empresa||'Sin asignar', estado]
-  );
-  return r.rows[0];
+  const eqs = await api('equipos', {
+    method: 'POST',
+    body: JSON.stringify({ codigo, nombre, tipo, area, marca: marca||null, modelo: modelo||null, num_serie: num_serie||null, frecuencia_meses: parseInt(frecuencia_meses), ultimo_mantenimiento: ultimo_mantenimiento||null, proximo_mantenimiento: proximo, empresa: empresa||'Sin asignar', estado })
+  });
+  return eqs[0];
 }
 
 async function updateEquipoFechas(equipo_id, fecha, frecuencia_meses) {
   const proximo = calcularProxima(fecha, frecuencia_meses);
   const estado = calcularEstado(proximo);
-  await query('UPDATE equipos SET ultimo_mantenimiento = $1, proximo_mantenimiento = $2, estado = $3 WHERE id = $4', [fecha, proximo, estado, equipo_id]);
+  await api(`equipos?id=eq.${equipo_id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ultimo_mantenimiento: fecha, proximo_mantenimiento: proximo, estado })
+  });
 }
 
 async function deleteEquipo(id) {
-  await query('DELETE FROM equipos WHERE id = $1', [id]);
+  await api(`equipos?id=eq.${id}`, { method: 'DELETE' });
+}
+
+async function getMantenimientosByEquipoId(equipo_id) {
+  return api(`mantenimientos?equipo_id=eq.${equipo_id}&order=fecha.desc&select=*`);
+}
+
+async function getTicketsByEquipoId(equipo_id) {
+  return api(`tickets?equipo_id=eq.${equipo_id}&order=fecha_creacion.desc&select=*`);
+}
+
+async function getMantenimientoById(id) {
+  const mants = await api(`mantenimientos?id=eq.${id}&select=*`);
+  return mants[0] || null;
 }
 
 async function getEmpresasUnicas() {
-  const r = await query('SELECT DISTINCT empresa FROM equipos WHERE empresa IS NOT NULL AND empresa != \'\' ORDER BY empresa');
-  return r.rows.map(r => r.empresa);
+  const eqs = await api('equipos?select=empresa&empresa=not.is.null&empresa=neq.');
+  return [...new Set(eqs.map(e => e.empresa).filter(Boolean))].sort();
 }
 
 // ── Mantenimientos ───────────────────────────
 
 async function createMantenimiento({ equipo_id, tipo, fecha, tecnico, descripcion, observaciones, costo, registrado_por }) {
-  const r = await query(
-    `INSERT INTO mantenimientos (equipo_id, tipo, fecha, tecnico, descripcion, observaciones, costo, registrado_por)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-    [parseInt(equipo_id), tipo, fecha, tecnico, descripcion||null, observaciones||null, costo ? parseFloat(costo) : null, registrado_por]
-  );
-  return r.rows[0];
+  const mants = await api('mantenimientos', {
+    method: 'POST',
+    body: JSON.stringify({ equipo_id: parseInt(equipo_id), tipo, fecha, tecnico, descripcion: descripcion||null, observaciones: observaciones||null, costo: costo ? parseFloat(costo) : null, registrado_por })
+  });
+  return mants[0];
 }
 
 async function deleteMantenimiento(id) {
-  await query('DELETE FROM mantenimientos WHERE id = $1', [id]);
+  await api(`mantenimientos?id=eq.${id}`, { method: 'DELETE' });
 }
 
 // ── Tickets ──────────────────────────────────
 
 async function getTicketsWithEquipo() {
-  const r = await query(`
-    SELECT t.*, e.nombre AS equipo_nombre, e.codigo AS equipo_codigo, e.empresa AS equipo_empresa
-    FROM tickets t LEFT JOIN equipos e ON t.equipo_id = e.id
-    ORDER BY t.fecha_creacion DESC
-  `);
-  return r.rows;
+  return api('tickets?order=fecha_creacion.desc&select=*,equipo:equipos!equipo_id(nombre,codigo,empresa)');
 }
 
 async function getTicketsByEmpresa(empresa) {
-  const r = await query(`
-    SELECT t.*, e.nombre AS equipo_nombre, e.codigo AS equipo_codigo
-    FROM tickets t LEFT JOIN equipos e ON t.equipo_id = e.id
-    WHERE e.empresa = $1
-    ORDER BY t.fecha_creacion DESC
-  `, [empresa]);
-  return r.rows;
+  return api(`tickets?order=fecha_creacion.desc&select=*,equipo:equipos!equipo_id!inner(nombre,codigo,empresa)&equipo.empresa=eq.${encodeURIComponent(empresa)}`);
 }
 
 async function createTicket({ equipo_id, tipo_falla, descripcion, reportado_por, reportado_por_id, contacto }) {
-  const r = await query(
-    `INSERT INTO tickets (equipo_id, tipo_falla, descripcion, reportado_por, reportado_por_id, contacto)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [parseInt(equipo_id), tipo_falla||'Sin especificar', descripcion, reportado_por, reportado_por_id||null, contacto||null]
-  );
-  return r.rows[0];
+  const tickets = await api('tickets', {
+    method: 'POST',
+    body: JSON.stringify({ equipo_id: parseInt(equipo_id), tipo_falla: tipo_falla||'Sin especificar', descripcion, reportado_por, reportado_por_id: reportado_por_id||null, contacto: contacto||null })
+  });
+  return tickets[0];
 }
 
 async function updateTicket(id, fields) {
-  const keys = Object.keys(fields).filter(k => fields[k] !== undefined);
-  if (!keys.length) return;
-  const sets = keys.map((k, i) => `${k} = $${i+1}`);
-  const vals = keys.map(k => fields[k]);
-  vals.push(id);
-  await query(`UPDATE tickets SET ${sets.join(', ')} WHERE id = $${keys.length+1}`, vals);
+  const body = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== undefined) body[k] = v;
+  }
+  if (!Object.keys(body).length) return;
+  await api(`tickets?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(body) });
 }
 
 async function getTicketById(id) {
-  const r = await query('SELECT * FROM tickets WHERE id = $1', [id]);
-  return r.rows[0] || null;
+  const tickets = await api(`tickets?id=eq.${id}&select=*`);
+  return tickets[0] || null;
 }
 
-async function createMantenimientoFromTicket({ equipo_id, fecha, tecnico, descripcion, observaciones, costo, registrado_por, ticket_id }) {
-  const r = await query(
-    `INSERT INTO mantenimientos (equipo_id, tipo, fecha, tecnico, descripcion, observaciones, costo, registrado_por)
-     VALUES ($1,'Correctivo',$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [equipo_id, fecha, tecnico, descripcion, observaciones, costo, registrado_por]
-  );
-  return r.rows[0];
+async function createMantenimientoFromTicket({ equipo_id, fecha, tecnico, descripcion, observaciones, costo, registrado_por }) {
+  return createMantenimiento({ equipo_id, tipo: 'Correctivo', fecha, tecnico, descripcion, observaciones, costo, registrado_por });
 }
 
-// ── Dashboard / Stats ────────────────────────
+// ── Dashboard ────────────────────────────────
 
 async function getDashboardStats() {
-  const r = await query(`
-    SELECT
-      (SELECT COUNT(*) FROM equipos)::int AS total_equipos,
-      (SELECT COUNT(*) FROM equipos WHERE estado = 'al_dia')::int AS al_dia,
-      (SELECT COUNT(*) FROM equipos WHERE estado = 'proximo')::int AS proximo,
-      (SELECT COUNT(*) FROM equipos WHERE estado = 'vencido')::int AS vencido,
-      (SELECT COUNT(*) FROM tickets WHERE estatus = 'abierto')::int AS tickets_abiertos,
-      (SELECT COUNT(*) FROM tickets WHERE estatus = 'en_proceso')::int AS tickets_en_proceso,
-      (SELECT COUNT(*) FROM tickets WHERE estatus = 'cerrado')::int AS tickets_cerrados
-  `);
-  return r.rows[0];
+  const [eqs, tickets] = await Promise.all([api('equipos?select=*'), api('tickets?select=*')]);
+  return {
+    total_equipos: eqs.length,
+    al_dia: eqs.filter(e => e.estado === 'al_dia').length,
+    proximo: eqs.filter(e => e.estado === 'proximo').length,
+    vencido: eqs.filter(e => e.estado === 'vencido').length,
+    tickets_abiertos: tickets.filter(t => t.estatus === 'abierto').length,
+    tickets_en_proceso: tickets.filter(t => t.estatus === 'en_proceso').length,
+    tickets_cerrados: tickets.filter(t => t.estatus === 'cerrado').length
+  };
 }
 
 module.exports = {
-  pool, query,
   hoy, calcularProxima, calcularEstado, actualizarEstados,
   findUserByEmail, findUserByEmailAll, createUser, getActiveTechnicians, getAllUsers, deactivateUser,
   getAllEquipos, getEquiposByEmpresa, getEquipoById, getEquipoByCodigo,
   createEquipo, updateEquipoFechas, deleteEquipo, getEmpresasUnicas,
-  createMantenimiento, deleteMantenimiento,
-  getTicketsWithEquipo, getTicketsByEmpresa, createTicket, updateTicket, getTicketById,
+  createMantenimiento, deleteMantenimiento, getMantenimientoById, getMantenimientosByEquipoId,
+  getTicketsWithEquipo, getTicketsByEmpresa, getTicketsByEquipoId, createTicket, updateTicket, getTicketById,
   createMantenimientoFromTicket,
   getDashboardStats
 };

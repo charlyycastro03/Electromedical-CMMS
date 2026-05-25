@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { requireAuth, requireRol } = require('../middleware/auth');
 const { getAllEquipos, getEquiposByEmpresa, getEquipoById, getEquipoByCodigo,
         createEquipo, deleteEquipo, getEmpresasUnicas, actualizarEstados,
-        query } = require('../utils/db');
+        getMantenimientosByEquipoId, getTicketsByEquipoId } = require('../utils/db');
 
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -27,8 +27,8 @@ router.get('/:id', requireAuth, async (req, res) => {
     const eq = await getEquipoById(parseInt(req.params.id));
     if (!eq) return res.status(404).json({ error: 'Equipo no encontrado.' });
     if (rol === 'cliente' && eq.empresa !== empresa) return res.status(403).json({ error: 'Sin acceso.' });
-    const mants = (await query('SELECT * FROM mantenimientos WHERE equipo_id = $1 ORDER BY fecha DESC', [eq.id])).rows;
-    const tickets = (await query('SELECT * FROM tickets WHERE equipo_id = $1 ORDER BY fecha_creacion DESC', [eq.id])).rows;
+    const mants = await getMantenimientosByEquipoId(eq.id);
+    const tickets = await getTicketsByEquipoId(eq.id);
     res.json({ equipo: eq, mantenimientos: mants, tickets });
   } catch (e) { res.status(500).json({ error: 'Error interno.' }); }
 });
