@@ -57,9 +57,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Error interno del servidor.' });
 });
 
-// ── Inicializar y arrancar ────────────────────
+// ── Exportar para Vercel ──────────────────────
 (async () => {
   await seedDB();
+})();
+
+module.exports = app;
+
+// ── Iniciar servidor local ────────────────────
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log('\n╔══════════════════════════════════════╗');
     console.log('║   Electromedical CMMS v2.0           ║');
@@ -69,4 +75,4 @@ app.use((err, req, res, next) => {
     console.log('  🔧 Usuario: carlos@electromedical.com / User2026');
     console.log('  🏥 Cliente: hospital@cliente.com / Cliente2026\n');
   });
-})();
+}
