@@ -1058,7 +1058,7 @@ function renderTickets(list) {
     </div>`).join('');
 }
 
-function abrirTicket(id) {
+async function abrirTicket(id) {
   const t = allTickets.find(x => x.id === id);
   if (!t) return;
 
