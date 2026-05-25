@@ -6,7 +6,6 @@ const express = require('express');
 const session = require('express-session');
 const cors    = require('cors');
 const path    = require('path');
-const { seedDB } = require('./utils/db');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -58,10 +57,6 @@ app.use((err, req, res, next) => {
 });
 
 // ── Exportar para Vercel ──────────────────────
-(async () => {
-  await seedDB();
-})();
-
 module.exports = app;
 
 // ── Iniciar servidor local ────────────────────
